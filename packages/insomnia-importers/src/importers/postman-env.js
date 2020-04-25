@@ -30,9 +30,44 @@ function importEnvironment(environment) {
     if (!value.enabled) {
       continue;
     }
-
-    newEnvironment.data[value.key] = value.value;
+    let newKey, newValue;
+    if (value.key.includes('.')) {
+      ({ newKey, newValue } = convertNestedKey(value.key, value.value));
+    } else {
+      ({ newKey, newValue } = convertDashToUnderscore(value.key, value.value));
+    }
+    newEnvironment.data[newKey] = newValue;
   }
 
   return [newEnvironment];
+}
+
+function convertNestedKey(key, value) {
+  const keys = key.split('.').map(key => convertDashInKey(key));
+  const newKey = keys[0];
+  const newValue = { [keys[1]]: convertDashInValue(value) };
+  return { newKey, newValue };
+}
+
+function convertDashToUnderscore(key, value) {
+  const newKey = convertDashInKey(key);
+  const newValue = convertDashInValue(value);
+  return { newKey, newValue };
+}
+
+function convertDashInValue(element) {
+  let value = element;
+  const matches = element.match(/\{\{(.*?)\}\}/g) || [];
+
+  matches.map(match => {
+    const newWord = convertDashInKey(match);
+    value = value.replace(match, newWord);
+  });
+
+  return value;
+}
+
+function convertDashInKey(element) {
+  const pattern = new RegExp('-', 'g');
+  return element.replace(pattern, '_');
 }
